@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 const fetch = require('node-fetch');
 
 const app = express();
-const port = 3000;
+const port = 4000;
 
 app.use(express.json());
 
@@ -104,5 +104,5 @@ app.get('/', async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log("Server Listening on PORT:", port);
+    console.log("Server Listening on port:", port);
 });
