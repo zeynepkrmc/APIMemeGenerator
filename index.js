@@ -19,7 +19,6 @@ async function fetchPictures(url) {
         $('img').each((index, elem) => {
             let imageURL = $(elem).attr('src');
             if (imageURL && !imageURL.startsWith('data:') && !imageURL.includes('#')) {
-                // Tam URL'yi oluştur
                 const absImgUrl = new URL(imageURL, url).href;
                 imageUrls.push(absImgUrl);
             }
@@ -48,11 +47,25 @@ app.get('/api/images', async (req, res) => {
     const websiteURL = req.query.url;
 
     if (!websiteURL) {
-        return res.status(400).json({ error: 'Enter a valid URL' });
+        return res.status(400).json({
+            status: 'error',
+            data: 'Enter a valid URL'
+        });
     }
 
     const images = await allPages(websiteURL, totalPages);
-    res.json(images);
+
+    if (images.length > 0) {
+        res.json({
+            status: 'success',
+            data: images
+        });
+    } else {
+        res.json({
+            status: 'no_images_found',
+            data: 'No images were found at the provided URL.'
+        });
+    }
 });
 
 app.get('/', (req, res) => {
