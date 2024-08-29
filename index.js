@@ -49,7 +49,7 @@ app.get('/api/images', async (req, res) => {
     if (!websiteURL) {
         return res.status(400).json({
             status: 'error',
-            data: 'Enter a valid URL'
+            data: 'Geçerli URL giriniz.'
         });
     }
 
@@ -62,8 +62,8 @@ app.get('/api/images', async (req, res) => {
         });
     } else {
         res.json({
-            status: 'no_images_found',
-            data: 'No images were found at the provided URL.'
+            status: 'resim bulunamadı',
+            data: 'Bu URL ye ait resim bulunamadı.'
         });
     }
 });
