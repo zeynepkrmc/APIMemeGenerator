@@ -1,77 +1,69 @@
 const express = require('express');
-const cheerio = require('cheerio');
 const fetch = require('node-fetch');
-const path = require('path');
+const cheerio = require('cheerio');
 
 const app = express();
-const port = 4000;
+const PORT = 5000; 
 
-app.use(express.json());
-app.use(express.static('public'));
-
-async function fetchPictures(url) {
-    try {
-        const response = await fetch(url);
-        const body = await response.text();
-        const $ = cheerio.load(body);
-        const imageUrls = [];
-
-        $('img').each((index, elem) => {
-            let imageURL = $(elem).attr('src');
-            if (imageURL && !imageURL.startsWith('data:') && !imageURL.includes('#')) {
-                const absImgUrl = new URL(imageURL, url).href;
-                imageUrls.push(absImgUrl);
-            }
-        });
-
-        return imageUrls;
-
-    } catch (error) {
-        console.error('Error fetching images:', error);
-        return [];
+const fetchMemeImagesFromPage = async (pageNumber) => {
+  try {
+    const response = await fetch(`http://apimeme.com/?ref=apilist.fun&page=${pageNumber}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-}
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const memeUrls = [];
 
-async function allPages(websiteURL, totalPages) {
-    const allImages = [];
-    for (let page = 1; page <= totalPages; page++) {
-        const pageURL = `${websiteURL}&page=${page}`;
-        const images = await fetchPictures(pageURL);
-        allImages.push(...images);
-    }
-    return allImages;
-}
+    $('img').each((index, element) => {
+      let imgSrc = $(element).attr('src');
+
+      if (imgSrc) {
+        if (!imgSrc.startsWith('data:') && !imgSrc.startsWith('http://apimeme.comdata:')) {
+          if (imgSrc.startsWith('http')) {
+            memeUrls.push(imgSrc);
+          } else {
+            const fullUrl = `http://apimeme.com${imgSrc}`;
+            memeUrls.push(fullUrl);
+          }
+        }
+      }
+    });
+
+    return memeUrls;
+  } catch (error) {
+    console.error(`Error fetching page ${pageNumber}:`, error.message);
+    return [];
+  }
+};
 
 app.get('/api/images', async (req, res) => {
-    const totalPages = parseInt(req.query.pages) || 1;
-    const websiteURL = req.query.url;
+  try {
+    const allMemeUrls = [];
 
-    if (!websiteURL) {
-        return res.status(400).json({
-            status: 'error',
-            data: 'Geçerli URL giriniz.'
-        });
+    for (let page = 1; page <= 29; page++) {
+      const memeUrlsFromPage = await fetchMemeImagesFromPage(page);
+      allMemeUrls.push(...memeUrlsFromPage);
     }
 
-    const images = await allPages(websiteURL, totalPages);
+    // Randomly select 4 images
+    const randomMemeUrls = allMemeUrls.sort(() => 0.5 - Math.random()).slice(0, 4);
 
-    if (images.length > 0) {
-        res.json({
-            status: 'success',
-            data: images
-        });
-    } else {
-        res.json({
-            status: 'resim bulunamadı',
-            data: 'Bu URL ye ait resim bulunamadı.'
-        });
-    }
+    res.json({
+      status: 'success',
+      data: randomMemeUrls
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Error fetching memes', 
+      error: error.message 
+    });
+  }
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'page.html'));
-});
-
-app.listen(port, () => {
-    console.log("Server Listening on port:", port);
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
